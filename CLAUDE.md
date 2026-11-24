@@ -1,0 +1,99 @@
+# claude_lld
+
+Development guidance for the `lld-seed` plugin itself. Users of the plugin never read this
+file; it is not loaded when the plugin is installed elsewhere.
+
+## What this repo is
+
+A Claude Code plugin that forces low-level design before implementation in Python repos.
+Read `SCOPE.md` for the problem and the division of labour, `GLOSSARY.md` for the vocabulary.
+The vocabulary is not negotiable mid-sentence: use module, interface, depth, seam, adapter.
+
+## Layout
+
+| Path | Contents |
+| --- | --- |
+| `.claude-plugin/` | `plugin.json`, `marketplace.json`. Nothing else goes here |
+| `skills/<name>/SKILL.md` | One skill per directory, reference files beside it |
+| `commands/` | Slash commands |
+| `hooks/hooks.json` | Hook wiring; scripts live in `scripts/` |
+| `templates/` | Files the generator writes into target repos |
+| `docs/assets/` | README banner and demo. `editor.html` holds the demo's design in CSS; regenerate with `scripts/make_banner.py` and `scripts/make_demo.py` |
+| `.out-of-scope/` | Rejected ideas with reasoning. Read before proposing a feature |
+
+## Discussing ideas with the author
+
+Be critical and brutal, and stay insightful. The failure mode is not rudeness, it is
+agreeableness: restating the author's idea back with enthusiasm, softening a diagnosis into
+a tidy plan, or reversing position the moment it is pushed on.
+
+- **Lead with the fact that would invalidate the thing**, not with what works. If a claim is
+  unverified, say so first, every time, until it is verified.
+- **Check before asserting.** "You have never used this" was wrong - two seeded repos carry
+  18 contracts. Go and look; an assertion about the world is a tool call, not an opinion.
+- **Do not reverse under pressure without new evidence.** If the position was overconfident,
+  say the position was overconfident. Changing sides because the author pushed is not being
+  persuaded, and dressing it as a newly-drawn distinction is worse.
+- **Separate the idea from the person.** Criticise the design, not the author's judgment, and
+  never charge the author with choices the assistant made.
+- **Harsh must be specific.** "Process cosplay" is performance; "nine sections, none ever
+  written under deadline" is a finding. If it is enjoyable to write, it is probably rhetoric.
+- **No tidy plan at the end of a diagnosis** unless asked. A plan makes an untested problem
+  feel solved.
+
+## House rules
+
+- **The plugin name is `lld-seed`, not `claude-lld`.** Names starting with `claude-` are
+  reserved and fail validation. The repo name and the plugin name differ on purpose.
+- **Guidance reaches the model only through skills.** A `CLAUDE.md` at a plugin root is not
+  loaded as context when the plugin is installed. This file exists for working *on* the repo.
+- **`dataviz` owns every visual decision. Never pick a colour, a surface or a typeface
+  here.** The skill ships with Claude Code; read `references/palette.md` for the role you
+  need and run `scripts/validate_palette.py` before shipping any palette. Reasoning about
+  delta E by hand is the failure, not the fallback - incident 010 is what it costs.
+- **Write no rule a tool can enforce.** Before adding prose, check whether ruff, mypy or
+  import-linter can decide it. If they can, configure it there and name the code instead.
+- **Eliminate no-ops.** Never write an instruction the model already follows by default; it
+  spends context and dilutes the rules that do change behaviour.
+- **Every rule carries a one-line rationale and a good/bad pair.** A rule without a failure
+  it prevents is decoration.
+- **Reference files load on demand.** Keep each `SKILL.md` short and route from it. Front-load
+  trigger words in the `description`, because the description decides when the skill fires.
+- Run `claude plugin validate .` after touching any manifest.
+
+## Git
+
+- **Commit at every completed unit of work, without being asked.** A phase, a skill, a
+  reference file, a working script. Do not leave finished work uncommitted waiting for a
+  review that may not come for hours.
+- One logical change per commit. Adding a skill and fixing a cross-link are two commits.
+- Subject line says what changed; body says why, and names what was rejected when the
+  choice was contested.
+- Work on a branch, not `main`. Merging is the user's call.
+- Push only when asked.
+
+## Logging
+
+The rules these scripts follow are the ones the plugin ships in `skills/logging/`. They apply
+to this repo too: it is the first place the guidance has to survive contact with real code.
+
+- Scripts log through the `lld` logger tree, configured once in each script's `main`.
+  Never configure logging at import.
+- **Nothing writes to stdout.** The hook's stdout carries its JSON decision; logs go to
+  stderr and to `.lld/gate.log`. There is a test that proves it, and it must stay passing.
+- `LLD_LOG_LEVEL` sets the level (default INFO), `LLD_LOG_FILE` redirects the file. Both are
+  read in `main`, never deeper, which is the rule the gate itself enforces on other code.
+- INFO records one line per decision with the rules that fired and the elapsed time. DEBUG
+  adds the inputs behind it. An unknown level degrades to INFO rather than failing.
+
+## Where rules come from
+
+`docs/incidents.md` records every observed failure and what changed because of it. Prefer
+adding a rule because something went wrong over adding one because something might. A rule
+with no incident behind it is a prediction, and predictions are the first thing to cut when
+the corpus needs pruning.
+
+## Target environment
+
+Claude Code 2.1.268, Python 3.12. Avoid manifest fields newer than 2.1.268, notably
+`userConfig.options` (2.1.271+).
